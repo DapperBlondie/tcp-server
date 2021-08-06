@@ -17,10 +17,10 @@ type TCPConfig struct {
 
 var conf *TCPConfig
 
-func main()  {
+func main() {
 	conf = &TCPConfig{
 		CMutex:  sync.Mutex{},
-		Counter: 0,
+		Counter: 10,
 	}
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
@@ -40,22 +40,27 @@ func main()  {
 
 	fmt.Println("TCP server is listening on localhost:8080 ...")
 	go func() {
-		for  {
+		for conf.Counter > 0 {
 			conn, err := listener.Accept()
 			if err != nil {
 				log.Println(err.Error() + "; Occurred in accepting connection.")
 				continue
 			}
 
+			conf.CMutex.Lock()
+			conf.Counter -= 1
+			conf.CMutex.Unlock()
+
 			go handleDialing(conn)
 		}
+		return
 	}()
 
-	<- sigChan
+	<-sigChan
 	return
 }
 
-func handleDialing(conn net.Conn)  {
+func handleDialing(conn net.Conn) {
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
@@ -72,7 +77,7 @@ func handleDialing(conn net.Conn)  {
 	fmt.Println(str)
 
 	conf.CMutex.Lock()
-	conf.Counter -= 1
+	conf.Counter += 1
 	conf.CMutex.Unlock()
 
 	return
